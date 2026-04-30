@@ -134,7 +134,16 @@ class MemoryTable:
         raise RecordNotFoundError(
             f"Запись с {self.key_field}={key_value} не найдена."
         )
+    
+    def sort_records(self, field_name: str, descending: bool = False) -> list[dict[str, Any]]:
+        if field_name not in self.fields:
+            raise ValidationError(f"Поле {field_name} не существует в таблице.")
 
+        return sorted(
+            (deepcopy(record) for record in self.records),
+            key=lambda x: x.get(field_name),
+            reverse=descending
+        )
 
 class InMemoryDatabase:
     def __init__(self) -> None:
