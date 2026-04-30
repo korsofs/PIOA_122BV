@@ -6,7 +6,7 @@ from src.db.backend.errors import (
     DatabaseError,
     ValidationError,
 )
-from src.db.backend.memory import MemoryDatabase, build_default_database
+from src.db.backend.memory import build_default_database
 
 
 class ConsoleApp:

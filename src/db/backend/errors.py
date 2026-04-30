@@ -6,17 +6,21 @@ class ValidationError(DatabaseError):
     """Ошибка валидации данных."""
 
 
-class DuplicateTableError(DatabaseError):
-    """Таблица с таким именем уже существует."""
+class DuplicateKeyError(DatabaseError):
+    """Ключ или имя уже заняты."""
 
 
 class TableNotFoundError(DatabaseError):
     """Таблица не найдена."""
 
 
-class DuplicateRecordError(DatabaseError):
-    """Запись с таким ключом уже существует."""
-
-
 class RecordNotFoundError(DatabaseError):
     """Запись не найдена."""
+
+
+class DuplicateTableError(DuplicateKeyError):
+    """Таблица с таким именем уже существует."""
+
+
+class DuplicateRecordError(DuplicateKeyError):
+    """Запись с таким ключом уже существует."""
