@@ -1,17 +1,26 @@
-from __future__ import annotations
-
 from typing import Any
 
+from src.db.backend.database import Database
 from src.db.backend.errors import (
     DatabaseError,
     ValidationError,
 )
-from src.db.backend.memory import build_default_database
+from src.db.backend.file import FileDatabase
+from src.db.backend.memory import MemoryDatabase, build_default_database
 
 
 class ConsoleApp:
     def __init__(self) -> None:
-        self.db: MemoryDatabase = build_default_database()
+        print("Выберите тип базы данных:")
+        print("1. In-memory")
+        print("2. File database")
+        choice = self._read_value("Введите пункт: ")
+
+        if choice == "2":
+            self.db: Database = FileDatabase()
+        else:
+            self.db = build_default_database()
+
         self.current_table_name: str = "patients"
 
     def _read_value(self, prompt: str) -> str:

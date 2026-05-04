@@ -24,3 +24,7 @@ class DuplicateTableError(DuplicateKeyError):
 
 class DuplicateRecordError(DuplicateKeyError):
     """Запись с таким ключом уже существует."""
+
+
+class StorageError(DatabaseError):
+    """Ошибка чтения или записи файловой базы данных."""
