@@ -2,9 +2,18 @@ import json
 from pathlib import Path
 from typing import Any
 
-from .database import Database
-from .errors import DuplicateTableError, StorageError, TableNotFoundError, ValidationError
-from .table import Table
+from src.db.backend.database import Database
+from src.db.backend.memory import (
+    DuplicateKeyError,
+    RecordNotFoundError,
+    TableNotFoundError,
+    ValidationError,
+)
+from src.db.backend.table import FileTable, Table
+
+
+class StorageError(Exception):
+    """Ошибка чтения или записи файловой базы данных."""
 
 
 class FileDatabase(Database):
@@ -14,14 +23,22 @@ class FileDatabase(Database):
 
     def create_table(self, name: str, key_field: str, fields: list[str]) -> Table:
         name = name.strip()
+        key_field = key_field.strip()
+        fields = [field_name.strip() for field_name in fields if field_name.strip()]
+
         if not name:
             raise ValidationError("Имя таблицы не может быть пустым.")
+        if not key_field:
+            raise ValidationError("Ключевое поле не может быть пустым.")
+        if not fields:
+            raise ValidationError("Список полей не может быть пустым.")
+        if key_field not in fields:
+            raise ValidationError("Ключевое поле должно входить в список полей.")
+        if self._table_path(name).exists():
+            raise DuplicateKeyError(f"Таблица {name} уже существует.")
 
-        table_path = self._table_path(name)
-        if table_path.exists():
-            raise DuplicateTableError(f"Таблица {name} уже существует.")
-
-        table = Table(name=name, key_field=key_field, fields=list(fields))
+        columns = [key_field] + [field_name for field_name in fields if field_name != key_field]
+        table = FileTable(name=name, key_field=key_field, fields=columns)
         self._attach_autosave(table)
         self._save_table(table)
         return table
@@ -43,7 +60,7 @@ class FileDatabase(Database):
         except json.JSONDecodeError as error:
             raise StorageError(f"Таблица {name} содержит некорректный JSON.") from error
 
-        table = Table.from_dict(data)
+        table = FileTable.from_dict(name=name, data=data)
         self._attach_autosave(table)
         return table
 
@@ -85,3 +102,28 @@ class FileDatabase(Database):
             tmp_path.replace(table_path)
         except OSError as error:
             raise StorageError(f"Не удалось сохранить таблицу {table.name}.") from error
+
+
+def build_default_database(storage_dir: str | Path = "data") -> FileDatabase:
+    db = FileDatabase(storage_dir=storage_dir)
+
+    if "students" not in db.list_tables():
+        db.create_table(
+            name="students",
+            key_field="student_id",
+            fields=["student_id", "first_name", "second_name", "age", "sex"],
+        )
+
+    return db
+
+
+__all__ = [
+    "FileDatabase",
+    "FileTable",
+    "StorageError",
+    "build_default_database",
+    "DuplicateKeyError",
+    "RecordNotFoundError",
+    "TableNotFoundError",
+    "ValidationError",
+]

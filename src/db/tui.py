@@ -1,26 +1,18 @@
+from __future__ import annotations
+
 from typing import Any
 
-from src.db.backend.database import Database
-from src.db.backend.errors import (
+from src.db.backend.memory import (
     DatabaseError,
+    InMemoryDatabase,
     ValidationError,
+    build_default_database,
 )
-from src.db.backend.file import FileDatabase
-from src.db.backend.memory import MemoryDatabase, build_default_database
 
 
 class ConsoleApp:
     def __init__(self) -> None:
-        print("Выберите тип базы данных:")
-        print("1. In-memory")
-        print("2. File database")
-        choice = self._read_value("Введите пункт: ")
-
-        if choice == "2":
-            self.db: Database = FileDatabase()
-        else:
-            self.db = build_default_database()
-
+        self.db: InMemoryDatabase = build_default_database()
         self.current_table_name: str = "patients"
 
     def _read_value(self, prompt: str) -> str:
@@ -65,6 +57,9 @@ class ConsoleApp:
         self.db.get_table(table_name)
         self.current_table_name = table_name
         print(f"Выбрана таблица {self.current_table_name}.")
+
+    def _open_another_table(self) -> None:
+        self._choose_table()
 
     def _create_table(self) -> None:
         print("Создание новой таблицы.")
@@ -163,6 +158,7 @@ class ConsoleApp:
             print("8. Удалить запись")
             print("9. Удалить таблицу")
             print("10. Сортировать записи")
+            print("11. Открыть другую таблицу")
             print("0. Выход")
 
             choice = self._read_value("Выберите пункт: ")
@@ -217,6 +213,9 @@ class ConsoleApp:
                 elif choice == "10":
                     table = self._get_current_table()
                     self._sort_records(table)
+
+                elif choice == "11":
+                    self._open_another_table()
 
                 elif choice == "0":
                     print("Выход.")

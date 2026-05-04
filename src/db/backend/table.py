@@ -2,7 +2,11 @@ from copy import deepcopy
 from dataclasses import dataclass, field
 from typing import Any, Callable
 
-from .errors import DuplicateRecordError, RecordNotFoundError, ValidationError
+from src.db.backend.memory import (
+    DuplicateKeyError,
+    RecordNotFoundError,
+    ValidationError,
+)
 
 SaveCallback = Callable[[], None] | None
 
@@ -74,6 +78,9 @@ class Table:
             raise ValidationError(f"Поле {self.key_field} обязательно.")
 
     def _validate_filters(self, filters: dict[str, Any]) -> None:
+        if not isinstance(filters, dict):
+            raise ValidationError("Фильтры должны быть словарём.")
+
         unknown_fields = [field_name for field_name in filters if field_name not in self.fields]
         if unknown_fields:
             raise ValidationError(f"Неизвестные поля фильтра: {', '.join(unknown_fields)}")
@@ -82,17 +89,19 @@ class Table:
         for field_name, expected_value in filters.items():
             if expected_value in (None, ""):
                 continue
+
             actual_value = record.get(field_name)
             if str(actual_value).lower() != str(expected_value).lower():
                 return False
+
         return True
 
     def create_record(self, record: dict[str, Any]) -> dict[str, Any]:
         self._validate_record_shape(record)
-        key_value = record[self.key_field]
 
+        key_value = record[self.key_field]
         if any(existing[self.key_field] == key_value for existing in self.records):
-            raise DuplicateRecordError(
+            raise DuplicateKeyError(
                 f"Запись с {self.key_field}={key_value} уже существует."
             )
 
@@ -119,6 +128,8 @@ class Table:
         )
 
     def update_record(self, key_value: Any, updates: dict[str, Any]) -> dict[str, Any]:
+        if not isinstance(updates, dict):
+            raise ValidationError("Обновления должны быть словарём.")
         if not updates:
             raise ValidationError("Нет данных для обновления.")
 
@@ -164,30 +175,25 @@ class Table:
 
     def to_dict(self) -> dict[str, Any]:
         return {
-            "name": self.name,
-            "key_field": self.key_field,
-            "fields": list(self.fields),
+            "columns": list(self.fields),
             "records": [deepcopy(record) for record in self.records],
         }
 
     @classmethod
     def from_dict(
         cls,
+        name: str,
         data: dict[str, Any],
         on_change: SaveCallback = None,
     ) -> "Table":
         if not isinstance(data, dict):
             raise ValidationError("Данные таблицы должны быть словарём.")
 
-        name = data.get("name")
-        key_field = data.get("key_field")
-        fields = data.get("fields")
+        columns = data.get("columns")
         records = data.get("records")
 
-        if not isinstance(name, str) or not isinstance(key_field, str):
-            raise ValidationError("Поля 'name' и 'key_field' должны быть строками.")
-        if not isinstance(fields, list) or not all(isinstance(field_name, str) for field_name in fields):
-            raise ValidationError("Поле 'fields' должно быть списком строк.")
+        if not isinstance(columns, list) or not columns or not all(isinstance(item, str) for item in columns):
+            raise ValidationError("Поле 'columns' должно быть непустым списком строк.")
         if not isinstance(records, list):
             raise ValidationError("Поле 'records' должно быть списком записей.")
 
@@ -199,11 +205,11 @@ class Table:
 
         return cls(
             name=name,
-            key_field=key_field,
-            fields=list(fields),
+            key_field=columns[0],
+            fields=list(columns),
             records=normalized_records,
             _on_change=on_change,
         )
 
 
-MemoryTable = Table
+FileTable = Table
