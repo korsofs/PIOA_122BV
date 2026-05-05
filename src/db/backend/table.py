@@ -2,11 +2,7 @@ from copy import deepcopy
 from dataclasses import dataclass, field
 from typing import Any, Callable
 
-from src.db.backend.memory import (
-    DuplicateKeyError,
-    RecordNotFoundError,
-    ValidationError,
-)
+from .errors import DuplicateKeyError, RecordNotFoundError, ValidationError
 
 SaveCallback = Callable[[], None] | None
 
@@ -77,13 +73,17 @@ class Table:
         if record.get(self.key_field) in (None, ""):
             raise ValidationError(f"Поле {self.key_field} обязательно.")
 
-    def _validate_filters(self, filters: dict[str, Any]) -> None:
+    def _validate_filters(self, filters: dict[str, Any] | None) -> dict[str, Any]:
+        if filters is None:
+            return {}
         if not isinstance(filters, dict):
             raise ValidationError("Фильтры должны быть словарём.")
 
         unknown_fields = [field_name for field_name in filters if field_name not in self.fields]
         if unknown_fields:
             raise ValidationError(f"Неизвестные поля фильтра: {', '.join(unknown_fields)}")
+
+        return filters
 
     def _matches(self, record: dict[str, Any], filters: dict[str, Any]) -> bool:
         for field_name, expected_value in filters.items():
@@ -93,7 +93,6 @@ class Table:
             actual_value = record.get(field_name)
             if str(actual_value).lower() != str(expected_value).lower():
                 return False
-
         return True
 
     def create_record(self, record: dict[str, Any]) -> dict[str, Any]:
@@ -110,8 +109,10 @@ class Table:
         return deepcopy(normalized)
 
     def select_records(self, filters: dict[str, Any] | None = None) -> list[dict[str, Any]]:
-        filters = filters or {}
-        self._validate_filters(filters)
+        filters = self._validate_filters(filters)
+
+        if not filters:
+            return [deepcopy(record) for record in self.records]
 
         result: list[dict[str, Any]] = []
         for record in self.records:

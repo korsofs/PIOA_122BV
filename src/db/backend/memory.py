@@ -2,26 +2,12 @@ from copy import deepcopy
 from dataclasses import dataclass, field
 from typing import Any
 
-
-class DatabaseError(Exception):
-    """Базовая ошибка базы данных."""
-
-
-class ValidationError(DatabaseError):
-    """Ошибка валидации данных."""
-
-
-class DuplicateKeyError(DatabaseError):
-    """Ошибка, если ключ или имя уже заняты."""
-
-
-class RecordNotFoundError(DatabaseError):
-    """Ошибка, если запись не найдена."""
-
-
-class TableNotFoundError(DatabaseError):
-    """Ошибка, если таблица не найдена."""
-
+from src.db.backend.errors import (
+    ValidationError,
+    DuplicateKeyError,
+    RecordNotFoundError,
+    TableNotFoundError,
+)
 
 @dataclass
 class MemoryTable:

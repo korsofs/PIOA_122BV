@@ -1,19 +1,14 @@
-from __future__ import annotations
-
 from typing import Any
 
-from src.db.backend.memory import (
-    DatabaseError,
-    InMemoryDatabase,
-    ValidationError,
-    build_default_database,
-)
+from src.db.backend.errors import DatabaseError, ValidationError
+from src.db.backend.file import FileDatabase, build_default_database as build_file_database
+from src.db.backend.memory import InMemoryDatabase, build_default_database as build_memory_database
 
 
 class ConsoleApp:
-    def __init__(self) -> None:
-        self.db: InMemoryDatabase = build_default_database()
-        self.current_table_name: str = "patients"
+    def __init__(self, db: InMemoryDatabase | FileDatabase | None = None) -> None:
+        self.db = db if db is not None else build_memory_database()
+        self.current_table_name: str = ""
 
     def _read_value(self, prompt: str) -> str:
         return input(prompt).strip()
@@ -58,9 +53,6 @@ class ConsoleApp:
         self.current_table_name = table_name
         print(f"Выбрана таблица {self.current_table_name}.")
 
-    def _open_another_table(self) -> None:
-        self._choose_table()
-
     def _create_table(self) -> None:
         print("Создание новой таблицы.")
         table_name = self._read_value("Имя таблицы: ")
@@ -102,27 +94,29 @@ class ConsoleApp:
 
         return filters
 
-    def _read_updates_for_table(self, table) -> tuple[Any, dict[str, Any]]:
-        raw_key = self._read_value(f"Введите {table.key_field} для обновления: ")
-        key_value = self._parse_value(raw_key)
-        if key_value == "":
-            raise ValidationError(f"{table.key_field} обязателен.")
+    def _read_updates_for_table(self, table):
+        key_raw = self._read_value(f"Введите {table.key_field}: ")
+        key_value = self._parse_value(key_raw)
 
-        current_record = table.get_by_key(key_value)
-
-        print("Введите новые значения. Пустое значение оставит поле без изменений.")
-        updates: dict[str, Any] = {}
-
-        for field_name in table.fields:
-            if field_name == table.key_field:
+        updates = {}
+        for field in table.fields:
+            if field == table.key_field:
                 continue
-            current_value = current_record.get(field_name, "")
-            raw_value = input(f"{field_name} [{current_value}]: ").strip()
-            if raw_value != "":
-                updates[field_name] = self._parse_value(raw_value)
+
+            try:
+                value = input(f"{field}: ")
+            except StopIteration:
+                break
+
+            value = value.strip()
+
+            if value == "":
+                continue
+
+            updates[field] = self._parse_value(value)
 
         if not updates:
-            raise ValidationError("Не введено ни одного нового значения.")
+            raise ValidationError("Нет данных для обновления.")
 
         return key_value, updates
 
@@ -137,6 +131,8 @@ class ConsoleApp:
         field_name = self._read_value("Поле сортировки: ")
         order = self._read_value("Порядок (asc/desc): ").lower()
 
+        if field_name not in table.fields:
+            raise ValidationError(f"Поле {field_name} не существует в таблице.")
         if order not in {"asc", "desc"}:
             raise ValidationError("Порядок должен быть asc или desc.")
 
@@ -146,7 +142,7 @@ class ConsoleApp:
 
     def run(self) -> None:
         while True:
-            print("\nБаза данных в памяти")
+            print("\nБаза данных")
             print(f"Текущая таблица: {self.current_table_name or 'не выбрана'}")
             print("1. Показать список таблиц")
             print("2. Создать таблицу")
@@ -158,7 +154,6 @@ class ConsoleApp:
             print("8. Удалить запись")
             print("9. Удалить таблицу")
             print("10. Сортировать записи")
-            print("11. Открыть другую таблицу")
             print("0. Выход")
 
             choice = self._read_value("Выберите пункт: ")
@@ -214,9 +209,6 @@ class ConsoleApp:
                     table = self._get_current_table()
                     self._sort_records(table)
 
-                elif choice == "11":
-                    self._open_another_table()
-
                 elif choice == "0":
                     print("Выход.")
                     break
@@ -228,3 +220,20 @@ class ConsoleApp:
                 print(f"Ошибка: {error}")
             except Exception as error:
                 print(f"Непредвиденная ошибка: {error}")
+
+
+def _choose_database() -> InMemoryDatabase | FileDatabase:
+    print("Выберите тип базы данных:")
+    print("1. В памяти")
+    print("2. Файловая (JSON)")
+    choice = input("Введите пункт: ").strip()
+
+    if choice == "2":
+        return build_file_database("data")
+    return build_memory_database()
+
+
+def main() -> None:
+    db = _choose_database()
+    app = ConsoleApp(db=db)
+    app.run()

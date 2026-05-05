@@ -3,13 +3,15 @@ from unittest.mock import patch
 import runpy
 from src.db.backend import errors as backend_errors
 from src.db.backend.memory import (
-    DuplicateKeyError,
     InMemoryDatabase,
     MemoryTable,
+    build_default_database
+)
+from src.db.backend.errors import (
+    ValidationError,
+    DuplicateKeyError,
     RecordNotFoundError,
     TableNotFoundError,
-    ValidationError,
-    build_default_database,
 )
 from src.db.tui import ConsoleApp
 
@@ -334,6 +336,7 @@ class TestConsoleApp(unittest.TestCase):
                 if call.args
             )
         )
+
     def test_run_full_flow(self) -> None:
         read_values = [
             "1",

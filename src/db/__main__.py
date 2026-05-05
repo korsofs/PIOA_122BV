@@ -1,9 +1,4 @@
-from src.db.tui import ConsoleApp
-
-
-def main() -> None:
-    app = ConsoleApp()
-    app.run()
+from src.db.tui import main
 
 
 if __name__ == "__main__":
