@@ -334,7 +334,6 @@ class TestConsoleApp(unittest.TestCase):
                 if call.args
             )
         )
-
     def test_run_full_flow(self) -> None:
         read_values = [
             "1",
@@ -380,7 +379,6 @@ class TestConsoleApp(unittest.TestCase):
             create=True,
         ):
             runpy.run_module("src.db.__main__", run_name="__main__")
-
 
 if __name__ == "__main__":
     unittest.main()

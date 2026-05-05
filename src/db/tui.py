@@ -5,16 +5,13 @@ from typing import Any
 from src.db.backend.errors import (
     DatabaseError,
     ValidationError,
-    DuplicateKeyError,
-    RecordNotFoundError,
-    TableNotFoundError,
 )
-from src.db.backend.memory import build_default_database, InMemoryDatabase
+from src.db.backend.memory import build_default_database
 
 
 class ConsoleApp:
     def __init__(self) -> None:
-        self.db: InMemoryDatabase = build_default_database()
+        self.db: MemoryDatabase = build_default_database()
         self.current_table_name: str = "patients"
 
     def _read_value(self, prompt: str) -> str:
@@ -51,9 +48,7 @@ class ConsoleApp:
         print("Список таблиц:")
         for table_name in tables:
             table = self.db.get_table(table_name)
-            print(
-                f"- {table.name} (ключ: {table.key_field}, поля: {', '.join(table.fields)})"
-            )
+            print(f"- {table.name} (ключ: {table.key_field}, поля: {', '.join(table.fields)})")
 
     def _choose_table(self) -> None:
         self._print_tables()
@@ -68,11 +63,7 @@ class ConsoleApp:
         key_field = self._read_value("Ключевое поле: ")
         fields_line = self._read_value("Поля через запятую: ")
 
-        fields = [
-            field_name.strip()
-            for field_name in fields_line.split(",")
-            if field_name.strip()
-        ]
+        fields = [field_name.strip() for field_name in fields_line.split(",") if field_name.strip()]
         table = self.db.create_table(table_name, key_field, fields)
         self.current_table_name = table.name
         print(f"Таблица {table.name} создана и выбрана.")
