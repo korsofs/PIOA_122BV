@@ -336,7 +336,6 @@ class TestConsoleApp(unittest.TestCase):
                 if call.args
             )
         )
-
     def test_run_full_flow(self) -> None:
         read_values = [
             "1",

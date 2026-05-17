@@ -1,0 +1,2 @@
+__csvdb__,patients,PatientID,PatientID,FullName,Gender,BirthDate,Email,Phone,Address,PolicyNumber,InsuranceCompany,Passport,EmergencyContact
+1,"""d""","""ds""","""ds""","""ds""","""ds""","""ds""","""ds""","""ds""","""ds""","""ds"""

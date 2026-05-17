@@ -1,12 +1,13 @@
 from typing import Any
 
+from src.db.backend.csv import CSVDatabase, build_default_database as build_csv_database
 from src.db.backend.errors import DatabaseError, ValidationError
 from src.db.backend.file import FileDatabase, build_default_database as build_file_database
 from src.db.backend.memory import InMemoryDatabase, build_default_database as build_memory_database
 
 
 class ConsoleApp:
-    def __init__(self, db: InMemoryDatabase | FileDatabase | None = None) -> None:
+    def __init__(self, db: InMemoryDatabase | FileDatabase | CSVDatabase | None = None) -> None:
         self.db = db if db is not None else build_memory_database()
         self.current_table_name: str = ""
 
@@ -222,14 +223,17 @@ class ConsoleApp:
                 print(f"Непредвиденная ошибка: {error}")
 
 
-def _choose_database() -> InMemoryDatabase | FileDatabase:
+def _choose_database() -> InMemoryDatabase | FileDatabase | CSVDatabase:
     print("Выберите тип базы данных:")
     print("1. В памяти")
     print("2. Файловая (JSON)")
+    print("3. Файловая (CSV)")
     choice = input("Введите пункт: ").strip()
 
     if choice == "2":
         return build_file_database("data")
+    if choice == "3":
+        return build_csv_database("data")
     return build_memory_database()
 
 
