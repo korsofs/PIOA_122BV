@@ -1,28 +1,13 @@
-from __future__ import annotations
-
 from copy import deepcopy
 from dataclasses import dataclass, field
 from typing import Any
 
-
-class DatabaseError(Exception):
-    """Базовая ошибка базы данных."""
-
-
-class ValidationError(DatabaseError):
-    """Ошибка валидации данных."""
-
-
-class DuplicateKeyError(DatabaseError):
-    """Ошибка, если ключ или имя уже заняты."""
-
-
-class RecordNotFoundError(DatabaseError):
-    """Ошибка, если запись не найдена."""
-
-
-class TableNotFoundError(DatabaseError):
-    """Ошибка, если таблица не найдена."""
+from src.db.backend.errors import (
+    ValidationError,
+    DuplicateKeyError,
+    RecordNotFoundError,
+    TableNotFoundError,
+)
 
 
 @dataclass
@@ -134,7 +119,7 @@ class MemoryTable:
         raise RecordNotFoundError(
             f"Запись с {self.key_field}={key_value} не найдена."
         )
-    
+
     def sort_records(self, field_name: str, descending: bool = False) -> list[dict[str, Any]]:
         if field_name not in self.fields:
             raise ValidationError(f"Поле {field_name} не существует в таблице.")
@@ -144,6 +129,7 @@ class MemoryTable:
             key=lambda x: x.get(field_name),
             reverse=descending
         )
+
 
 class InMemoryDatabase:
     def __init__(self) -> None:
