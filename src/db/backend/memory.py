@@ -1,134 +1,17 @@
-from __future__ import annotations
-
-from dataclasses import dataclass, field
+from copy import deepcopy
 from typing import Any
 
-
-class DatabaseError(Exception):
-    """Базовая ошибка базы данных."""
-
-
-class ValidationError(DatabaseError):
-    """Ошибка валидации данных."""
-
-
-class DuplicateKeyError(DatabaseError):
-    """Ошибка, если ключ или имя уже заняты."""
+from src.db.backend.errors import (
+    DuplicateKeyError,
+    RecordNotFoundError,
+    TableNotFoundError,
+    ValidationError,
+)
+from src.db.backend.table import Table
 
 
-class RecordNotFoundError(DatabaseError):
-    """Ошибка, если запись не найдена."""
-
-
-class TableNotFoundError(DatabaseError):
-    """Ошибка, если таблица не найдена."""
-
-
-@dataclass
-class MemoryTable:
-    name: str
-    key_field: str
-    fields: list[str]
-    records: list[dict[str, Any]] = field(default_factory=list)
-
-    def _validate_record_shape(self, record: dict[str, Any]) -> None:
-        if not isinstance(record, dict):
-            raise ValidationError("Запись должна быть словарём.")
-
-        unknown_fields = [field_name for field_name in record if field_name not in self.fields]
-        if unknown_fields:
-            raise ValidationError(
-                f"Неизвестные поля записи: {', '.join(unknown_fields)}"
-            )
-
-        missing_fields = [field_name for field_name in self.fields if field_name not in record]
-        if missing_fields:
-            raise ValidationError(
-                f"Отсутствуют поля записи: {', '.join(missing_fields)}"
-            )
-
-        if record.get(self.key_field) in (None, ""):
-            raise ValidationError(f"Поле {self.key_field} обязательно.")
-
-    def _validate_filters(self, filters: dict[str, Any]) -> None:
-        unknown_fields = [field_name for field_name in filters if field_name not in self.fields]
-        if unknown_fields:
-            raise ValidationError(
-                f"Неизвестные поля фильтра: {', '.join(unknown_fields)}"
-            )
-
-    def _matches(self, record: dict[str, Any], filters: dict[str, Any]) -> bool:
-        for field_name, expected_value in filters.items():
-            if expected_value in (None, ""):
-                continue
-
-            actual_value = record.get(field_name)
-            if str(actual_value).lower() != str(expected_value).lower():
-                return False
-
-        return True
-
-    def create_record(self, record: dict[str, Any]) -> dict[str, Any]:
-        self._validate_record_shape(record)
-
-        key_value = record[self.key_field]
-        if any(existing[self.key_field] == key_value for existing in self.records):
-            raise DuplicateKeyError(
-                f"Запись с {self.key_field}={key_value} уже существует."
-            )
-
-        normalized = {field_name: record[field_name] for field_name in self.fields}
-        self.records.append(normalized)
-        return normalized.copy()
-
-    def select_records(self, filters: dict[str, Any] | None = None) -> list[dict[str, Any]]:
-        filters = filters or {}
-        self._validate_filters(filters)
-
-        result: list[dict[str, Any]] = []
-        for record in self.records:
-            if self._matches(record, filters):
-                result.append(record.copy())
-        return result
-
-    def get_by_key(self, key_value: Any) -> dict[str, Any]:
-        for record in self.records:
-            if record[self.key_field] == key_value:
-                return record
-        raise RecordNotFoundError(
-            f"Запись с {self.key_field}={key_value} не найдена."
-        )
-
-    def update_record(self, key_value: Any, updates: dict[str, Any]) -> dict[str, Any]:
-        if not updates:
-            raise ValidationError("Нет данных для обновления.")
-
-        unknown_fields = [field_name for field_name in updates if field_name not in self.fields]
-        if unknown_fields:
-            raise ValidationError(
-                f"Неизвестные поля обновления: {', '.join(unknown_fields)}"
-            )
-
-        if self.key_field in updates and updates[self.key_field] != key_value:
-            raise ValidationError("Изменение ключевого поля запрещено.")
-
-        record = self.get_by_key(key_value)
-        for field_name, value in updates.items():
-            if field_name == self.key_field:
-                continue
-            record[field_name] = value
-
-        return record.copy()
-
-    def delete_record(self, key_value: Any) -> dict[str, Any]:
-        for index, record in enumerate(self.records):
-            if record[self.key_field] == key_value:
-                removed = self.records.pop(index)
-                return removed.copy()
-
-        raise RecordNotFoundError(
-            f"Запись с {self.key_field}={key_value} не найдена."
-        )
+class MemoryTable(Table):
+    pass
 
 
 class InMemoryDatabase:

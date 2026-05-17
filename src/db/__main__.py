@@ -1,8 +1,4 @@
-from src.db.tui import run
-
-
-def main() -> None:
-    run()
+from src.db.tui import main
 
 
 if __name__ == "__main__":

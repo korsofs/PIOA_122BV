@@ -1,0 +1,16 @@
+{
+  "columns": [
+    "PatientID",
+    "FullName",
+    "Gender",
+    "BirthDate",
+    "Email",
+    "Phone",
+    "Address",
+    "PolicyNumber",
+    "InsuranceCompany",
+    "Passport",
+    "EmergencyContact"
+  ],
+  "records": []
+}
