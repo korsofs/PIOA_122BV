@@ -1,27 +1,13 @@
-from __future__ import annotations
-
+from copy import deepcopy
 from dataclasses import dataclass, field
 from typing import Any
 
-
-class DatabaseError(Exception):
-    """Базовая ошибка базы данных."""
-
-
-class ValidationError(DatabaseError):
-    """Ошибка валидации данных."""
-
-
-class DuplicateKeyError(DatabaseError):
-    """Ошибка, если ключ или имя уже заняты."""
-
-
-class RecordNotFoundError(DatabaseError):
-    """Ошибка, если запись не найдена."""
-
-
-class TableNotFoundError(DatabaseError):
-    """Ошибка, если таблица не найдена."""
+from src.db.backend.errors import (
+    ValidationError,
+    DuplicateKeyError,
+    RecordNotFoundError,
+    TableNotFoundError,
+)
 
 
 @dataclass
@@ -79,7 +65,8 @@ class MemoryTable:
 
         normalized = {field_name: record[field_name] for field_name in self.fields}
         self.records.append(normalized)
-        return normalized.copy()
+
+        return deepcopy(normalized)
 
     def select_records(self, filters: dict[str, Any] | None = None) -> list[dict[str, Any]]:
         filters = filters or {}
@@ -88,13 +75,13 @@ class MemoryTable:
         result: list[dict[str, Any]] = []
         for record in self.records:
             if self._matches(record, filters):
-                result.append(record.copy())
+                result.append(deepcopy(record))  # deepcopy
         return result
 
     def get_by_key(self, key_value: Any) -> dict[str, Any]:
         for record in self.records:
             if record[self.key_field] == key_value:
-                return record
+                return deepcopy(record)
         raise RecordNotFoundError(
             f"Запись с {self.key_field}={key_value} не найдена."
         )
@@ -112,22 +99,35 @@ class MemoryTable:
         if self.key_field in updates and updates[self.key_field] != key_value:
             raise ValidationError("Изменение ключевого поля запрещено.")
 
-        record = self.get_by_key(key_value)
-        for field_name, value in updates.items():
-            if field_name == self.key_field:
-                continue
-            record[field_name] = value
+        for record in self.records:
+            if record[self.key_field] == key_value:
+                for field_name, value in updates.items():
+                    if field_name != self.key_field:
+                        record[field_name] = value
+                return deepcopy(record)
 
-        return record.copy()
+        raise RecordNotFoundError(
+            f"Запись с {self.key_field}={key_value} не найдена."
+        )
 
     def delete_record(self, key_value: Any) -> dict[str, Any]:
         for index, record in enumerate(self.records):
             if record[self.key_field] == key_value:
                 removed = self.records.pop(index)
-                return removed.copy()
+                return deepcopy(removed)
 
         raise RecordNotFoundError(
             f"Запись с {self.key_field}={key_value} не найдена."
+        )
+
+    def sort_records(self, field_name: str, descending: bool = False) -> list[dict[str, Any]]:
+        if field_name not in self.fields:
+            raise ValidationError(f"Поле {field_name} не существует в таблице.")
+
+        return sorted(
+            (deepcopy(record) for record in self.records),
+            key=lambda x: x.get(field_name),
+            reverse=descending
         )
 
 
