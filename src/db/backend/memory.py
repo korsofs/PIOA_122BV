@@ -1,12 +1,7 @@
-from copy import deepcopy
-from typing import Any
+from __future__ import annotations
 
-from src.db.backend.errors import (
-    DuplicateKeyError,
-    RecordNotFoundError,
-    TableNotFoundError,
-    ValidationError,
-)
+from src.db.backend.database import Database
+from src.db.backend.errors import DuplicateKeyError, TableNotFoundError, ValidationError
 from src.db.backend.table import Table
 
 
@@ -14,7 +9,7 @@ class MemoryTable(Table):
     pass
 
 
-class InMemoryDatabase:
+class InMemoryDatabase(Database):
     def __init__(self) -> None:
         self.tables: dict[str, MemoryTable] = {}
 

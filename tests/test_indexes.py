@@ -8,13 +8,11 @@ from unittest.mock import patch
 
 from src.db.backend.csv import (
     CSVDatabase,
-    CSVTable,
     StorageError as CSVStorageError,
     build_default_database as build_csv_default_database,
 )
 from src.db.backend.database import Database
 from src.db.backend.errors import (
-    DatabaseError,
     DuplicateKeyError,
     RecordNotFoundError,
     TableNotFoundError,
@@ -27,7 +25,6 @@ from src.db.backend.file import (
 )
 from src.db.backend.memory import (
     InMemoryDatabase,
-    MemoryTable,
     build_default_database as build_memory_default_database,
 )
 from src.db.backend.table import Table

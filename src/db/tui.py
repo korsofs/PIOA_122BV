@@ -99,17 +99,15 @@ class ConsoleApp:
         key_raw = self._read_value(f"Введите {table.key_field}: ")
         key_value = self._parse_value(key_raw)
 
-        updates = {}
+        updates: dict[str, Any] = {}
         for field in table.fields:
             if field == table.key_field:
                 continue
 
             try:
-                value = input(f"{field}: ")
-            except StopIteration:
-                break
-
-            value = value.strip()
+                value = input(f"{field}: ").strip()
+            except (EOFError, StopIteration):
+                value = ""
 
             if value == "":
                 continue
@@ -141,6 +139,41 @@ class ConsoleApp:
         records = table.sort_records(field_name, descending=descending)
         self._print_records(records)
 
+    def _read_index_fields(self, table) -> list[str]:
+        raw = self._read_value("Поля индекса через запятую: ")
+        fields = [field_name.strip() for field_name in raw.split(",") if field_name.strip()]
+
+        if not fields:
+            raise ValidationError("Индекс должен содержать хотя бы одно поле.")
+        if len(set(fields)) != len(fields):
+            raise ValidationError("Поля индекса должны быть уникальными.")
+
+        unknown_fields = [field_name for field_name in fields if field_name not in table.fields]
+        if unknown_fields:
+            raise ValidationError(f"Полей нет в таблице: {', '.join(unknown_fields)}")
+
+        return fields
+
+    def _print_indexes(self, table) -> None:
+        indexes = table.list_indexes()
+        if not indexes:
+            print("Индексы не созданы.")
+            return
+
+        print(f"Индексы таблицы {table.name}:")
+        for index_number, index_fields in enumerate(indexes, start=1):
+            print(f"- {index_number}. {', '.join(index_fields)}")
+
+    def _create_index(self, table) -> None:
+        fields = self._read_index_fields(table)
+        table.create_index(fields)
+        print(f"Индекс по полям {', '.join(fields)} создан.")
+
+    def _drop_index(self, table) -> None:
+        fields = self._read_index_fields(table)
+        table.drop_index(fields)
+        print(f"Индекс по полям {', '.join(fields)} удалён.")
+
     def run(self) -> None:
         while True:
             print("\nБаза данных")
@@ -155,6 +188,9 @@ class ConsoleApp:
             print("8. Удалить запись")
             print("9. Удалить таблицу")
             print("10. Сортировать записи")
+            print("11. Создать индекс")
+            print("12. Показать список индексов")
+            print("13. Удалить индекс")
             print("0. Выход")
 
             choice = self._read_value("Выберите пункт: ")
@@ -209,6 +245,18 @@ class ConsoleApp:
                 elif choice == "10":
                     table = self._get_current_table()
                     self._sort_records(table)
+
+                elif choice == "11":
+                    table = self._get_current_table()
+                    self._create_index(table)
+
+                elif choice == "12":
+                    table = self._get_current_table()
+                    self._print_indexes(table)
+
+                elif choice == "13":
+                    table = self._get_current_table()
+                    self._drop_index(table)
 
                 elif choice == "0":
                     print("Выход.")

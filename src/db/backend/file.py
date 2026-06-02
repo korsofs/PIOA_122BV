@@ -1,6 +1,5 @@
 import json
 from pathlib import Path
-from typing import Any
 
 from .database import Database
 from .errors import (
